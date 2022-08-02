@@ -8,9 +8,8 @@ class Note {
 
 class App {
   constructor() {
-    this.notes = JSON.parse(localStorage.getItem('notes')) || [];
+    this.notes = [new Note("abc1", "test title", "test text")];
     this.selectedNoteId = "";
-    this.miniSidebar = true;
 
     this.$activeForm = document.querySelector(".active-form");
     this.$inactiveForm = document.querySelector(".inactive-form");
@@ -22,15 +21,10 @@ class App {
     this.$modalForm = document.querySelector("#modal-form");
     this.$modalTitle = document.querySelector("#modal-title");
     this.$modalText = document.querySelector("#modal-text");
-    this.$closeModalForm = document.querySelector("#modal-btn");
-    this.$sidebar = document.querySelector(".sidebar");
-
-  
 
     this.addEventListeners();
     this.displayNotes();
   }
-  
 
   addEventListeners() {
     document.body.addEventListener("click", (event) => {
@@ -46,17 +40,6 @@ class App {
       const text = this.$noteText.value;
       this.addNote({ title, text });
       this.closeActiveForm();
-    });
-
-    this.$modalForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-    });
-
-    this.$sidebar.addEventListener("mouseover", (event) => {
-      this.handleToggleSidebar();
-    });
-    this.$sidebar.addEventListener("mouseout", (event) => {
-      this.handleToggleSidebar();
     });
   }
 
@@ -99,16 +82,10 @@ class App {
   }
   closeModal(event) {
     const isModalFormClickedOn = this.$modalForm.contains(event.target);
-    const isCloseModalBtnClickedOn = this.$closeModalForm.contains(
-      event.target
-    );
-    if (
-      (!isModalFormClickedOn || isCloseModalBtnClickedOn) &&
-      this.$modal.classList.contains("open-modal")
-    ) {
+    if (!isModalFormClickedOn && this.$modal.classList.contains("open-modal")) {
       this.editNote(this.selectedNoteId, {
         title: this.$modalTitle.value,
-        text: this.$modalText.value
+        text: this.$modalText.value,
       });
       this.$modal.classList.remove("open-modal");
     }
@@ -128,7 +105,7 @@ class App {
     if (text != "") {
       const newNote = new Note(cuid(), title, text);
       this.notes = [...this.notes, newNote];
-      this.render();
+      this.displayNotes();
     }
   }
 
@@ -140,12 +117,12 @@ class App {
       }
       return note;
     });
-    this.render();
+    this.displayNotes();
   }
 
   deleteNote(id) {
     this.notes = this.notes.filter((note) => note.id != id);
-    this.render();
+    this.displayNotes();
   }
 
   handleMouseOverNote(element) {
@@ -163,30 +140,8 @@ class App {
     $noteFooter.style.visibility = "hidden";
   }
 
-  handleToggleSidebar() {
-    if (this.miniSidebar) {
-      this.$sidebar.style.width = "250px";
-      this.$sidebar.classList.add("sidebar-hover");
-      this.$sidebar
-        .querySelector(".active-item")
-        .classList.add("sidebar-hover");
-      this.miniSidebar = false;
-    } else {
-      this.$sidebar.style.width = "80px";
-      this.$sidebar.classList.remove("sidebar-hover");
-      this.miniSidebar = true;
-    }
-  }
-
-    saveNotes (){
-      localStorage.setItem('notes', JSON.stringify(this.notes));
-    }
-
-    render(){
-      this.saveNotes();
-      this.displayNotes();
-    }
-  // onmouseover="app.handleMouseOverNote(this)" onmouseout="app.handleMouseOutNote(this)"
+  onmouseover = "app.handleMouseOverNote(this)";
+  onmouseout = "app.handleMouseOutNote(this)";
 
   displayNotes() {
     this.$notes.innerHTML = this.notes
