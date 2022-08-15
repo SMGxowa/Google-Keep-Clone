@@ -8,8 +8,13 @@ class Note {
 
 class App {
   constructor() {
-    this.notes = [new Note("abc1", "test title", "test text")];
+    // localStorage.setItem('test', JSON.stringify(['123']));
+    // console.log(JSON.parse(localStorage.getItem('test')));
+    this.notes = [];
+    console.log(this.notes);
     this.selectedNoteId = "";
+    this.miniSidebar = true;
+    this.userId = "";
 
     this.$activeForm = document.querySelector(".active-form");
     this.$inactiveForm = document.querySelector(".inactive-form");
@@ -21,9 +26,77 @@ class App {
     this.$modalForm = document.querySelector("#modal-form");
     this.$modalTitle = document.querySelector("#modal-title");
     this.$modalText = document.querySelector("#modal-text");
+    this.$closeModalForm = document.querySelector("#modal-btn");
+    this.$sidebar = document.querySelector(".sidebar");
+    this.$sidebarActiveItem = document.querySelector(".active-item");
+
+    this.$app = document.querySelector("#app");
+    this.$firebaseAuthContainer = document.querySelector(
+      "#firebaseui-auth-container"
+    );
+    this.$authUserText = document.querySelector(".auth-user");
+    this.$logoutButton = document.querySelector(".logout");
+
+    this.ui = new firebaseui.auth.AuthUI(auth);
+    this.handleAuth();
 
     this.addEventListeners();
     this.displayNotes();
+  }
+
+  handleAuth() {
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        console.log(user.uid);
+        this.userId = user.uid;
+        this.$authUserText.innerHTML = user.displayName;
+        this.redirectToApp();
+      } else {
+        this.redirectToAuth();
+      }
+    });
+  }
+
+  handleLogout() {
+    firebase
+      .auth()
+      .signOut()
+      .then(() => {
+        this.redirectToAuth();
+      })
+      .catch((error) => {
+        console.log("ERROR OCCURED", error);
+      });
+  }
+
+  redirectToApp() {
+    this.$firebaseAuthContainer.style.display = "none";
+    this.$app.style.display = "block";
+    this.fetchNotesFromDB();
+  }
+
+  redirectToAuth() {
+    this.$firebaseAuthContainer.style.display = "block";
+    this.$app.style.display = "none";
+
+    this.ui.start("#firebaseui-auth-container", {
+      callbacks: {
+        signInSuccessWithAuthResult: (authResult, redirectUrl) => {
+          // User successfully signed in.
+          // Return type determines whether we continue the redirect automatically
+          // or whether we leave that to developer to handle.
+          console.log("authResult", authResult.user.uid);
+          this.userId = authResult.user.uid;
+          this.$authUserText.innerHTML = user.displayName;
+          this.redirectToApp();
+        },
+      },
+      signInOptions: [
+        firebase.auth.EmailAuthProvider.PROVIDER_ID,
+        firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+      ],
+      // Other config options...
+    });
   }
 
   addEventListeners() {
@@ -40,6 +113,21 @@ class App {
       const text = this.$noteText.value;
       this.addNote({ title, text });
       this.closeActiveForm();
+    });
+
+    this.$modalForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+    });
+
+    this.$sidebar.addEventListener("mouseover", (event) => {
+      this.handleToggleSidebar();
+    });
+    this.$sidebar.addEventListener("mouseout", (event) => {
+      this.handleToggleSidebar();
+    });
+
+    this.$logoutButton.addEventListener("click", (event) => {
+      this.handleLogout();
     });
   }
 
@@ -82,7 +170,13 @@ class App {
   }
   closeModal(event) {
     const isModalFormClickedOn = this.$modalForm.contains(event.target);
-    if (!isModalFormClickedOn && this.$modal.classList.contains("open-modal")) {
+    const isCloseModalBtnClickedOn = this.$closeModalForm.contains(
+      event.target
+    );
+    if (
+      (!isModalFormClickedOn || isCloseModalBtnClickedOn) &&
+      this.$modal.classList.contains("open-modal")
+    ) {
       this.editNote(this.selectedNoteId, {
         title: this.$modalTitle.value,
         text: this.$modalText.value,
@@ -103,9 +197,9 @@ class App {
 
   addNote({ title, text }) {
     if (text != "") {
-      const newNote = new Note(cuid(), title, text);
+      const newNote = { id: cuid(), title, text };
       this.notes = [...this.notes, newNote];
-      this.displayNotes();
+      this.render();
     }
   }
 
@@ -117,12 +211,12 @@ class App {
       }
       return note;
     });
-    this.displayNotes();
+    this.render();
   }
 
   deleteNote(id) {
     this.notes = this.notes.filter((note) => note.id != id);
-    this.displayNotes();
+    this.render();
   }
 
   handleMouseOverNote(element) {
@@ -140,58 +234,106 @@ class App {
     $noteFooter.style.visibility = "hidden";
   }
 
-  onmouseover = "app.handleMouseOverNote(this)";
-  onmouseout = "app.handleMouseOutNote(this)";
+  handleToggleSidebar() {
+    if (this.miniSidebar) {
+      this.$sidebar.style.width = "250px";
+      this.$sidebar.classList.add("sidebar-hover");
+      this.$sidebarActiveItem.classList.add("sidebar-active-item");
+      this.miniSidebar = false;
+    } else {
+      this.$sidebar.style.width = "80px";
+      this.$sidebar.classList.remove("sidebar-hover");
+      this.$sidebarActiveItem.classList.remove("sidebar-active-item");
+      this.miniSidebar = true;
+    }
+  }
 
+  fetchNotesFromDB() {
+    var docRef = db.collection("users").doc(this.userId);
+
+    docRef
+      .get()
+      .then((doc) => {
+        if (doc.exists) {
+          console.log("Document data:", doc.data().notes);
+          this.notes = doc.data().notes;
+          this.displayNotes();
+        } else {
+          // doc.data() will be undefined in this case
+          console.log("No such document!");
+          db.collection("users")
+            .doc(this.userId)
+            .set({
+              notes: [],
+            })
+            .then(() => {
+              console.log("User successfully created!");
+            })
+            .catch((error) => {
+              console.error("Error writing document: ", error);
+            });
+        }
+      })
+      .catch((error) => {
+        console.log("Error getting document:", error);
+      });
+  }
+
+  saveNotes() {
+    db.collection("users")
+      .doc(this.userId)
+      .set({
+        notes: this.notes,
+      })
+      .then(() => {
+        console.log("Document successfully written!");
+      })
+      .catch((error) => {
+        console.error("Error writing document: ", error);
+      });
+  }
+
+  render() {
+    this.saveNotes();
+    this.displayNotes();
+  }
   displayNotes() {
     this.$notes.innerHTML = this.notes
       .map(
         (note) =>
           `
-        <div class="note" id="${note.id}">
+      <div class="note" id="${note.id}" onmouseover="app.handleMouseOverNote(this)" onmouseout="app.handleMouseOutNote(this)">
           <span class="material-icons check-circle">check_circle</span>
           <div class="title">${note.title}</div>
           <div class="text">${note.text}</div>
           <div class="note-footer">
-            <div class="tooltip">
-              <span class="material-icons-outlined hover small-icon"
-                >add_alert</span
-              >
-              <span class="tooltip-text">Remind me</span>
-            </div>
-            <div class="tooltip">
-              <span class="material-icons-outlined hover small-icon"
-                >person_add</span
-              >
-              <span class="tooltip-text">Collaborator</span>
-            </div>
-            <div class="tooltip">
-              <span class="material-icons-outlined hover small-icon"
-                >palette</span
-              >
-              <span class="tooltip-text">Change Color</span>
-            </div>
-            <div class="tooltip">
-              <span class="material-icons-outlined hover small-icon"
-                >image</span
-              >
-              <span class="tooltip-text">Add Image</span>
-            </div>
-            <div class="tooltip archive">
-              <span class="material-icons-outlined hover small-icon"
-                >archive</span
-              >
-              <span class="tooltip-text">Archive</span>
-            </div>
-            <div class="tooltip">
-              <span class="material-icons-outlined hover small-icon"
-                >more_vert</span
-              >
-              <span class="tooltip-text">More</span>
-            </div>
+              <div class="tooltip">
+                  <span class="material-icons-outlined hover small-icon">add_alert</span>
+                  <span class="tooltip-text">Remind me</span>
+              </div>
+              <div class="tooltip">
+                  <span class="material-icons-outlined hover small-icon">person_add</span>
+                  <span class="tooltip-text">Collaborator</span>
+              </div>
+              <div class="tooltip">
+                  <span class="material-icons-outlined hover small-icon">palette</span>
+                  <span class="tooltip-text">Change Color</span>
+              </div>
+              <div class="tooltip">
+                  <span class="material-icons-outlined hover small-icon">image</span>
+                  <span class="tooltip-text">Add Image</span>
+              </div>
+              <div class="tooltip archive">
+                  <span class="material-icons-outlined hover small-icon">archive</span>
+                  <span class="tooltip-text">Archive</span>
+              </div>
+              <div class="tooltip">
+                  <span class="material-icons-outlined hover small-icon">more_vert</span>
+                  <span class="tooltip-text">More</span>
+              </div>
           </div>
-        </div>
-    `
+      </div>
+      `
       )
       .join("");
   }

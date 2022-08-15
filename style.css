@@ -6,7 +6,11 @@
   box-sizing: border-box;
   font-family: "Roboto", sans-serif;
 }
-/* HOVER EFFECTS */
+
+#app {
+  display: "none";
+}
+/* HOVER EFEECTS */
 
 .material-icons-outlined {
   padding: 10px;
@@ -90,6 +94,14 @@ input:focus {
 .profile-actions-area {
   display: flex;
 }
+.profile-actions-area .tooltip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.auth-user {
+  cursor: pointer;
+}
 
 /* MAIN SECTION STYLES */
 
@@ -100,23 +112,31 @@ input:focus {
   top: 64px;
   display: flex;
   flex-direction: column;
-  padding-left: 15px;
   color: #5f6368;
   width: 80px;
   overflow-x: hidden;
+  transition: 0.8s;
+  height: 100%;
 }
+.sidebar-hover {
+  box-shadow: 0 1px 2px 0 rgb(60 64 67 / 30%), 0 2px 6px 2px rgb(60 64 67 / 15%);
+  background: white;
+}
+
 .active {
-  background: #fef0c3;
+  background-color: #fef0c3;
   border-radius: 50%;
   color: black;
 }
 .active:hover {
-  background: #fef0c3;
+  background-color: #fef0c3;
 }
 .sidebar .sidebar-item {
-  padding: 3px;
+  padding: 3px 0;
   display: flex;
   align-items: center;
+  cursor: pointer;
+  white-space: nowrap;
 }
 .sidebar-item .sidebar-text {
   color: black;
@@ -124,8 +144,24 @@ input:focus {
   margin-left: 20px;
   width: 250px;
 }
+.sidebar-item .material-icons-outlined {
+  margin-left: 18px;
+}
 .sidebar-item:nth-child(1) {
   margin-top: 5px;
+}
+.sidebar-item:hover {
+  background: #f1f3f4;
+  border-top-right-radius: 25px;
+  border-bottom-right-radius: 25px;
+}
+.sidebar-active-item {
+  background-color: #fef0c3;
+  border-top-right-radius: 25px;
+  border-bottom-right-radius: 25px;
+}
+.sidebar-active-item:hover {
+  background-color: #fef0c3;
 }
 
 /* MAIN FORM */
@@ -177,6 +213,7 @@ input:focus {
   width: 100%;
   padding: 10px;
 }
+
 .form .form-actions .icons {
   display: flex;
 }
@@ -204,6 +241,7 @@ input:focus {
   flex-wrap: wrap;
   padding: 0 50px;
 }
+
 .note {
   background: white;
   width: 240px;
@@ -246,7 +284,7 @@ input:focus {
   position: fixed;
   top: 0;
   left: 0;
-  background: rgb(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5);
   width: 100%;
   height: 100%;
   visibility: hidden;
